@@ -25,8 +25,8 @@ interface RequestMessage extends Message {
 }
 
 type Notification =
-  | {method: "document/didOpen", params: DidOpenTextDocumentParams}
-  | {method: "document/didChange", params: DidChangeTextDocumentParams}
+  | {method: "textDocument/didOpen", params: DidOpenTextDocumentParams}
+  | {method: "textDocument/didChange", params: DidChangeTextDocumentParams}
 
 // Decode message
 export const decode = (content: string): Notification | RequestMessage | null => {
@@ -95,11 +95,11 @@ type TextDocumentContentChangeEvent = {
   text: string;
 }
 
-const documentDidOpen = (params: DidOpenTextDocumentParams) => {
+const textDocumentDidOpen = (params: DidOpenTextDocumentParams) => {
   DOCUMENTS[params.textDocument.uri] = params.textDocument.text
 }
 
-const documentDidChange = (params: DidChangeTextDocumentParams) => {
+const textDocumentDidChange = (params: DidChangeTextDocumentParams) => {
   if (params.contentChanges.length > 0) {
     DOCUMENTS[params.textDocument.uri] = params.contentChanges[0].text
   }
@@ -116,11 +116,11 @@ process.stdin.on("data", (buf) => {
       case("initialize"):
         respond(payload.id, initializeResult());
         break;
-      case("document/didOpen"):
-        documentDidOpen(payload.params)
+      case("textDocument/didOpen"):
+        textDocumentDidOpen(payload.params)
         break;
-      case("document/didChange"):
-        documentDidChange(payload.params)
+      case("textDocument/didChange"):
+        textDocumentDidChange(payload.params)
         break;
       case("shutdown"):
         respond(payload.id, shutdownResult());
