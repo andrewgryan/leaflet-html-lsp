@@ -4,7 +4,11 @@
   "main": "index.js",
   "author": "andrewgryan <andrew.ryan@metoffice.gov.uk>",
   "license": "MIT",
+  "scripts": {
+    "test": "vitest"
+  },
   "devDependencies": {
-    "@types/node": "^20.14.2"
+    "@types/node": "^20.14.2",
+    "vitest": "^1.6.0"
   }
 }
