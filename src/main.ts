@@ -21,15 +21,41 @@ interface Message {
 
 interface RequestMessage extends Message {
   id: number;
-  method: "initialize" | "shutdown" | "exit";
+  method: string;
+  params?: Object;
 }
+
+interface CompletionRequest extends RequestMessage {
+  method: "textDocument/completion";
+  params: CompletionParams;
+}
+
+interface CompletionParams {}
+
+interface InitializeRequest extends RequestMessage {
+  method: "initialize";
+}
+
+interface ShutdownRequest extends RequestMessage {
+  method: "shutdown";
+}
+
+interface ExitRequest extends RequestMessage {
+  method: "exit";
+}
+
+type Request =
+  | InitializeRequest
+  | ShutdownRequest
+  | ExitRequest
+  | CompletionRequest
 
 type Notification =
   | {method: "textDocument/didOpen", params: DidOpenTextDocumentParams}
   | {method: "textDocument/didChange", params: DidChangeTextDocumentParams}
 
 // Decode message
-export const decode = (content: string): Notification | RequestMessage | null => {
+export const decode = (content: string): Notification | Request | null => {
   const [header, body] = content.split("\r\n\r\n")
   if (header.startsWith("Content-Length")) {
     const length = parseInt(header.split(": ")[1])
@@ -49,7 +75,8 @@ const respond = (id: number, result: Object | null) => {
 const initializeResult = () => {
   return {
     capabilities: {
-      textDocumentSync: 1
+      textDocumentSync: 1,
+      completionProvider: {}
     },
     serverInfo: {
       name: "leaflet-html",
@@ -105,11 +132,26 @@ const textDocumentDidChange = (params: DidChangeTextDocumentParams) => {
   }
 }
 
+// Completion
+interface CompletionItem {
+  label: string;
+  detail: string;
+  documentation: string;
+}
+
+const textDocumentCompletionResult = (): CompletionItem[] => {
+  return [
+    { label: "l-map", detail: "l-map", documentation: "Leaflet L.map component" },
+    { label: "l-tile-layer", detail: "l-tile-layer", documentation: "Leaflet L.tileLayer component" },
+    { label: "l-marker", detail: "l-marker", documentation: "Leaflet L.marker component" },
+    { label: "l-icon", detail: "l-icon", documentation: "Leaflet L.icon component" },
+  ]
+}
+
 // Listen on stdin/stdout
 process.stdin.on("data", (buf) => {
   const message = buf.toString()
   log(message + "\n")
-  log("DOCS: " + JSON.stringify(DOCUMENTS) + "\n")
   const payload = decode(message)
   if (payload !== null) {
     switch (payload.method) {
@@ -121,6 +163,9 @@ process.stdin.on("data", (buf) => {
         break;
       case("textDocument/didChange"):
         textDocumentDidChange(payload.params)
+        break;
+      case("textDocument/completion"):
+        respond(payload.id, textDocumentCompletionResult())
         break;
       case("shutdown"):
         respond(payload.id, shutdownResult());
