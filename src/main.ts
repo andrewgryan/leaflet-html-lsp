@@ -1,4 +1,5 @@
 const fs = require("fs")
+import { decode } from "./rpc"
 
 
 const log = (msg: string) => {
@@ -21,6 +22,11 @@ interface Message {
 
 interface RequestMessage extends Message {
   id: number;
+  method: string;
+  params?: Object;
+}
+
+interface NotificationMessage extends Message {
   method: string;
   params?: Object;
 }
@@ -53,23 +59,44 @@ type Request =
 type Notification =
   | {method: "textDocument/didOpen", params: DidOpenTextDocumentParams}
   | {method: "textDocument/didChange", params: DidChangeTextDocumentParams}
+  | PublishDiagnosticsNotification
 
-// Decode message
-export const decode = (content: string): Notification | Request | null => {
-  const [header, body] = content.split("\r\n\r\n")
-  if (header.startsWith("Content-Length")) {
-    const length = parseInt(header.split(": ")[1])
-    return JSON.parse(body.substring(0, length))
-  } else {
-    log(`Could not parse: ${content}\n`)
-    return null
-  }
+interface PublishDiagnosticsNotification extends NotificationMessage {
+  method: "textDocument/publishDiagnostics",
+  params: PublishDiagnosticsParams
 }
+
+type DocumentUri = string
+
+interface PublishDiagnosticsParams {
+  uri: DocumentUri;
+  diagnostics: Diagnostic[];
+}
+
+interface Diagnostic {
+  range: Range;
+  message: string;
+}
+
+interface Range {
+  start: Position;
+  end: Position;
+}
+
+interface Position {
+  line: number;
+  character: number;
+}
+
 
 const respond = (id: number, result: Object | null) => {
   const response = encode({ jsonrpc: "2.0", id, result })
   process.stdout.write(response)
-  log(response + "\n")
+}
+
+const respondNotification = (message: NotificationMessage) => {
+  const response = encode(message)
+  process.stdout.write(response)
 }
 
 const initializeResult = () => {
@@ -148,18 +175,39 @@ const textDocumentCompletionResult = (): CompletionItem[] => {
   ]
 }
 
+// Diagnostics
+const publishDiagnostics = (uri: DocumentUri): PublishDiagnosticsNotification => {
+  return {
+    jsonrpc: "2.0",
+    method: "textDocument/publishDiagnostics",
+    params: {
+      uri,
+      diagnostics: [
+        {
+          range: {
+            start: {line: 0, character: 0},
+            end: {line: 0, character: 3}
+          },
+          message: "Hello, World!"
+        }
+      ]
+    }
+  }
+}
+
 // Listen on stdin/stdout
 process.stdin.on("data", (buf) => {
   const message = buf.toString()
-  log(message + "\n")
-  const payload = decode(message)
-  if (payload !== null) {
+  log(`${message}\n`)
+  const payloads = decode(message) as (Request | Notification)[]
+  payloads.forEach(payload => {
     switch (payload.method) {
       case("initialize"):
         respond(payload.id, initializeResult());
         break;
       case("textDocument/didOpen"):
         textDocumentDidOpen(payload.params)
+        respondNotification(publishDiagnostics(payload.params.textDocument.uri))
         break;
       case("textDocument/didChange"):
         textDocumentDidChange(payload.params)
@@ -173,5 +221,5 @@ process.stdin.on("data", (buf) => {
       case("exit"):
         process.exit(0)
     }
-  }
+  })
 })
