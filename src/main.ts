@@ -230,14 +230,26 @@ const publishDiagnostics = (uri: DocumentUri): PublishDiagnosticsNotification =>
   const lines = text.split("\n")
   const diagnostics = []
   for (let i=0; i<lines.length; i++) {
-    if (lines[i].indexOf("l-map") !== -1) {
-      diagnostics.push({
-          range: {
-            start: {line: i, character: 0},
-            end: {line: i, character: 3}
-          },
-          message: "Hello, World!"
-      })
+    const j = lines[i].indexOf("l-map")
+    if (j !== -1) {
+      if (lines[i].indexOf("center") === -1) {
+        diagnostics.push({
+            range: {
+              start: {line: i, character: j},
+              end: {line: i, character: j + 5}
+            },
+            message: "Missing 'center' HTML attribute."
+        })
+      }
+      if (lines[i].indexOf("zoom") === -1) {
+        diagnostics.push({
+            range: {
+              start: {line: i, character: j},
+              end: {line: i, character: j + 5}
+            },
+            message: "Missing 'zoom' HTML attribute."
+        })
+      }
     }
   }
   return {
