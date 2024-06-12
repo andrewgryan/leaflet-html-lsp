@@ -26,6 +26,11 @@ interface RequestMessage extends Message {
   params?: Object;
 }
 
+interface ResponseMessage extends Message {
+  id: number;
+  result?: Object | null;
+}
+
 interface NotificationMessage extends Message {
   method: string;
   params?: Object;
@@ -36,11 +41,37 @@ interface CompletionRequest extends RequestMessage {
   params: CompletionParams;
 }
 
+interface TextDocumentCompletionResponse extends ResponseMessage {
+  result: CompletionItem[]
+}
+
 interface CompletionParams {}
 
 interface InitializeRequest extends RequestMessage {
   method: "initialize";
 }
+
+interface InitializeResponse extends ResponseMessage {
+  result: InitializeResult
+}
+
+interface InitializeResult {
+  capabilities: ServerCapabilities;
+  serverInfo: {
+    name: string;
+    version: string;
+  }
+}
+
+interface ServerCapabilities {
+  textDocumentSync: number;
+  completionProvider: Object;
+}
+
+interface ShutdownResponse extends ResponseMessage {
+  result: null
+}
+
 
 interface ShutdownRequest extends RequestMessage {
   method: "shutdown";
@@ -89,17 +120,20 @@ interface Position {
 }
 
 
-const respond = (id: number, result: Object | null) => {
-  const response = encode({ jsonrpc: "2.0", id, result })
-  process.stdout.write(response)
-}
-
-const respondNotification = (message: NotificationMessage) => {
+const respond = (message: NotificationMessage | ResponseMessage) => {
   const response = encode(message)
   process.stdout.write(response)
 }
 
-const initializeResult = () => {
+const initializeResponse = (id: number): InitializeResponse => {
+  return {
+    jsonrpc: "2.0",
+    id,
+    result: initializeResult()
+  }
+}
+
+const initializeResult = (): InitializeResult => {
   return {
     capabilities: {
       textDocumentSync: 1,
@@ -112,7 +146,21 @@ const initializeResult = () => {
   }
 }
 
-const shutdownResult = () => null
+const shutdownResponse = (id: number): ShutdownResponse => {
+  return {
+    jsonrpc: "2.0",
+    id,
+    result: null
+  }
+}
+
+const textDocumentCompletionResponse = (id: number): TextDocumentCompletionResponse => {
+  return {
+    jsonrpc: "2.0",
+    id,
+    result: textDocumentCompletionResult()
+  }
+}
 
 type DocumentStore = {
   [key: string]: string;
@@ -203,20 +251,20 @@ process.stdin.on("data", (buf) => {
   payloads.forEach(payload => {
     switch (payload.method) {
       case("initialize"):
-        respond(payload.id, initializeResult());
+        respond(initializeResponse(payload.id));
         break;
       case("textDocument/didOpen"):
         textDocumentDidOpen(payload.params)
-        respondNotification(publishDiagnostics(payload.params.textDocument.uri))
+        respond(publishDiagnostics(payload.params.textDocument.uri))
         break;
       case("textDocument/didChange"):
         textDocumentDidChange(payload.params)
         break;
       case("textDocument/completion"):
-        respond(payload.id, textDocumentCompletionResult())
+        respond(textDocumentCompletionResponse(payload.id))
         break;
       case("shutdown"):
-        respond(payload.id, shutdownResult());
+        respond(shutdownResponse(payload.id));
         break;
       case("exit"):
         process.exit(0)
