@@ -225,20 +225,27 @@ const textDocumentCompletionResult = (): CompletionItem[] => {
 
 // Diagnostics
 const publishDiagnostics = (uri: DocumentUri): PublishDiagnosticsNotification => {
+  // TODO: analyse code
+  const text = DOCUMENTS[uri]
+  const lines = text.split("\n")
+  const diagnostics = []
+  for (let i=0; i<lines.length; i++) {
+    if (lines[i].indexOf("l-map") !== -1) {
+      diagnostics.push({
+          range: {
+            start: {line: i, character: 0},
+            end: {line: i, character: 3}
+          },
+          message: "Hello, World!"
+      })
+    }
+  }
   return {
     jsonrpc: "2.0",
     method: "textDocument/publishDiagnostics",
     params: {
       uri,
-      diagnostics: [
-        {
-          range: {
-            start: {line: 0, character: 0},
-            end: {line: 0, character: 3}
-          },
-          message: "Hello, World!"
-        }
-      ]
+      diagnostics
     }
   }
 }
@@ -259,6 +266,7 @@ process.stdin.on("data", (buf) => {
         break;
       case("textDocument/didChange"):
         textDocumentDidChange(payload.params)
+        respond(publishDiagnostics(payload.params.textDocument.uri))
         break;
       case("textDocument/completion"):
         respond(textDocumentCompletionResponse(payload.id))
