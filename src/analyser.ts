@@ -32,10 +32,12 @@ export const analyse = (text: string): Diagnostic[] => {
   els.forEach(el => {
     console.log(lineNumber)
     if (!el.hasAttribute("center")) {
+      let i = el.range[0]
+      let j = el.range[0] + el.tagName.length + 1
       diagnostics.push({
           range: {
-            start: {line: lineNumber[el.range[0]], character: characterNumber[el.range[0]]},
-            end: {line: lineNumber[el.range[1] - 1], character: characterNumber[el.range[1] - 1]},
+            start: {line: lineNumber[i], character: characterNumber[i]},
+            end: {line: lineNumber[j], character: characterNumber[j]},
           },
           message: "Missing 'center' HTML attribute."
       })
