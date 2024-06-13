@@ -4,6 +4,13 @@ interface ParsedMessage {
   payload: Object | null;
 }
 
+// Encode message
+export const encode = (payload: Object) => {
+  const content = JSON.stringify(payload)
+  return `Content-Length: ${content.length}\r\n\r\n${content}`
+}
+
+// Decode message
 export const decode = (content: string) => {
   const messages = []
   while (content.length > 0) {

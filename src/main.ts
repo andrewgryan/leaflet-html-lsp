@@ -1,21 +1,15 @@
-const fs = require("fs")
-import { decode } from "./rpc"
+import fs from "fs"
+import { encode, decode } from "./rpc"
 import { analyse } from "./analyser"
 import { Diagnostic } from "./diagnostic"
 
 
 const log = (msg: string) => {
-  fs.appendFile("./logs.txt", msg, (err: Error) => {
+  fs.appendFile("./logs.txt", msg, (err: NodeJS.ErrnoException | null) => {
     if (err) {
       console.error(err)
     }
   })
-}
-
-// Encode message
-export const encode = (payload: Object) => {
-  const content = JSON.stringify(payload)
-  return `Content-Length: ${content.length}\r\n\r\n${content}`
 }
 
 interface Message {
