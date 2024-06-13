@@ -1,6 +1,8 @@
 import { parse } from "node-html-parser"
 import { Diagnostic, DiagnosticSeverity } from "./diagnostic"
 
+type Definition = [string, string[]]
+
 // Analyse Leaflet-HTML syntax
 export const analyse = (text: string): Diagnostic[] => {
   const diagnostics: Diagnostic[] = []
@@ -26,24 +28,32 @@ export const analyse = (text: string): Diagnostic[] => {
     }
   }
 
+  // Definition
+  const definitions: Definition[] = [
+    ["l-map", ["center", "zoom"]],
+    ["l-tile-layer", ["url-template"]],
+    ["l-circle", ["lat-lng"]]
+  ]
+
   // HTML parser
   const document = parse(text)
-  const els = document.querySelectorAll("l-map")
-  els.forEach(el => {
-    console.log(lineNumber);
-    ["center", "zoom"].forEach(attName => {
-      if (!el.hasAttribute(attName)) {
-        let iStart = el.range[0]
-        let iEnd = el.range[1]
-        diagnostics.push({
-            severity: DiagnosticSeverity.Error,
-            range: {
-              start: {line: lineNumber[iStart], character: characterNumber[iStart]},
-              end: {line: lineNumber[iEnd], character: characterNumber[iEnd]},
-            },
-            message: `Missing '${attName}' HTML attribute.`
-        })
-      }
+  definitions.forEach(([tagName, attNames]) => {
+    const els = document.querySelectorAll(tagName)
+    els.forEach(el => {
+      attNames.forEach(attName => {
+        if (!el.hasAttribute(attName)) {
+          let iStart = el.range[0]
+          let iEnd = el.range[1]
+          diagnostics.push({
+              severity: DiagnosticSeverity.Error,
+              range: {
+                start: {line: lineNumber[iStart], character: characterNumber[iStart]},
+                end: {line: lineNumber[iEnd], character: characterNumber[iEnd]},
+              },
+              message: `Missing '${attName}' HTML attribute.`
+          })
+        }
+      })
     })
   })
   return diagnostics
