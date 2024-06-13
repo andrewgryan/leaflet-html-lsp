@@ -1,7 +1,12 @@
 import { parse } from "node-html-parser";
 import { Diagnostic, DiagnosticSeverity } from "./diagnostic";
 
-type Definition = [string, string[]];
+interface TypedAttribute {
+  name: string;
+  format: "json" | "number" | "string";
+}
+
+type Definition = [string, TypedAttribute[]];
 
 // Analyse Leaflet-HTML syntax
 export const analyse = (text: string): Diagnostic[] => {
@@ -30,9 +35,9 @@ export const analyse = (text: string): Diagnostic[] => {
 
   // Definition
   const definitions: Definition[] = [
-    ["l-map", ["center", "zoom"]],
-    ["l-tile-layer", ["url-template"]],
-    ["l-circle", ["lat-lng"]],
+    ["l-map", [{name: "center", format: "json"}, {name: "zoom", format: "number"}]],
+    ["l-tile-layer", [{name: "url-template", format: "string"}]],
+    ["l-circle", [{name: "lat-lng", format: "json"}]],
   ];
 
   // HTML parser
@@ -40,28 +45,54 @@ export const analyse = (text: string): Diagnostic[] => {
   definitions.forEach(([tagName, attNames]) => {
     const els = document.querySelectorAll(tagName);
     els.forEach((el) => {
-      attNames.forEach((attName) => {
+      attNames.forEach((att) => {
         let iStart = el.range[0];
         let iEnd = el.range[1];
-        if (el.hasAttribute(attName)) {
+        if (el.hasAttribute(att.name)) {
           // Try to parse it
-          if (attName === "zoom") {
-            const value = el.getAttribute(attName);
-            if (value !== undefined && isNaN(parseInt(value))) {
-              diagnostics.push({
-                severity: DiagnosticSeverity.Error,
-                range: {
-                  start: {
-                    line: lineNumber[iStart],
-                    character: characterNumber[iStart],
-                  },
-                  end: {
-                    line: lineNumber[iEnd],
-                    character: characterNumber[iEnd],
-                  },
-                },
-                message: `Could not parse: '${attName}' into integer.`,
-              });
+          const value = el.getAttribute(att.name);
+          if (value !== undefined) {
+            switch(att.format) {
+              case("json"):
+                try {
+                  JSON.parse(value)
+                } catch(e) {
+                  diagnostics.push({
+                    severity: DiagnosticSeverity.Error,
+                    range: {
+                      start: {
+                        line: lineNumber[iStart],
+                        character: characterNumber[iStart],
+                      },
+                      end: {
+                        line: lineNumber[iEnd],
+                        character: characterNumber[iEnd],
+                      },
+                    },
+                    message: `Could not parse: '${att.name}' into ${att.format}.`,
+                  });
+                }
+                break;
+              case("number"):
+                if (isNaN(parseInt(value))) {
+                  diagnostics.push({
+                    severity: DiagnosticSeverity.Error,
+                    range: {
+                      start: {
+                        line: lineNumber[iStart],
+                        character: characterNumber[iStart],
+                      },
+                      end: {
+                        line: lineNumber[iEnd],
+                        character: characterNumber[iEnd],
+                      },
+                    },
+                    message: `Could not parse: '${att.name}' into ${att.format}.`,
+                  });
+                }
+                break;
+              case("string"):
+                break;
             }
           }
         } else {
@@ -75,7 +106,7 @@ export const analyse = (text: string): Diagnostic[] => {
               },
               end: { line: lineNumber[iEnd], character: characterNumber[iEnd] },
             },
-            message: `Missing '${attName}' HTML attribute.`,
+            message: `Missing '${att.name}' HTML attribute.`,
           });
         }
       });
