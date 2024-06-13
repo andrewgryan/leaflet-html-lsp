@@ -1,7 +1,7 @@
 import fs from "fs"
 import { encode, decode } from "./rpc"
 import { analyse } from "./analyser"
-import { Diagnostic } from "./diagnostic"
+import { Diagnostic, Range } from "./diagnostic"
 
 
 const log = (msg: string) => {
@@ -61,6 +61,7 @@ interface InitializeResult {
 
 interface ServerCapabilities {
   textDocumentSync: number;
+  codeActionProvider: boolean;
   completionProvider: Object;
 }
 
@@ -77,11 +78,35 @@ interface ExitRequest extends RequestMessage {
   method: "exit";
 }
 
+interface CodeActionRequest extends RequestMessage {
+  method: "textDocument/codeAction";
+  params: CodeActionParams
+}
+
+interface CodeActionResponse extends ResponseMessage {
+  result: CodeActionResult;
+}
+
+interface ExitRequest extends RequestMessage {
+  method: "exit";
+}
+
+interface CodeActionParams {
+  textDocument: TextDocumentIdentifier;
+  range: Range;
+  context: CodeActionContext;
+}
+
+interface CodeActionContext {
+  diagnostics: Diagnostic[];
+}
+
 type Request =
   | InitializeRequest
   | ShutdownRequest
   | ExitRequest
   | CompletionRequest
+  | CodeActionRequest
 
 type Notification =
   | {method: "textDocument/didOpen", params: DidOpenTextDocumentParams}
@@ -117,6 +142,7 @@ const initializeResult = (): InitializeResult => {
   return {
     capabilities: {
       textDocumentSync: 1,
+      codeActionProvider: true,
       completionProvider: {}
     },
     serverInfo: {
@@ -216,6 +242,49 @@ const publishDiagnostics = (uri: DocumentUri): PublishDiagnosticsNotification =>
   }
 }
 
+// Code actions
+type CodeActionResult = (Command | CodeAction)[] | null
+
+interface CodeAction {
+  title: string;
+  edit?: WorkspaceEdit;
+  command?: Command;
+}
+
+interface WorkspaceEdit {
+  changes: {[uri: DocumentUri]: TextEdit[]; };
+}
+
+interface Command {
+  title: string;
+  command: string;
+}
+
+interface TextEdit {
+  range: Range;
+  newText: string;
+}
+
+const codeActionResponse = (id: number, result: CodeActionResult): CodeActionResponse => {
+  return {
+    jsonrpc: "2.0",
+    id,
+    result
+  }
+}
+
+const codeActions = (params: CodeActionParams): CodeActionResult => {
+  const changes = {
+    [params.textDocument.uri]: [
+      {
+        range: params.range,
+        newText: "Hello, World!"
+      }
+    ]
+  }
+  return [{ title: "Insert/replace with Hello, World!", edit: { changes }}]
+}
+
 // Listen on stdin/stdout
 process.stdin.on("data", (buf) => {
   const message = buf.toString()
@@ -236,6 +305,9 @@ process.stdin.on("data", (buf) => {
         break;
       case("textDocument/completion"):
         respond(textDocumentCompletionResponse(payload.id))
+        break;
+      case("textDocument/codeAction"):
+        respond(codeActionResponse(payload.id, codeActions(payload.params)))
         break;
       case("shutdown"):
         respond(shutdownResponse(payload.id));

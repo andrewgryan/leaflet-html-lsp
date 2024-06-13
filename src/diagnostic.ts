@@ -13,7 +13,7 @@ export namespace DiagnosticSeverity {
 
 type DiagnosticSeverity = 1 | 2 | 3 | 4;
 
-interface Range {
+export interface Range {
   start: Position;
   end: Position;
 }
