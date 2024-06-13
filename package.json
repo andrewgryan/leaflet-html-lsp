@@ -10,5 +10,8 @@
   "devDependencies": {
     "@types/node": "^20.14.2",
     "vitest": "^1.6.0"
+  },
+  "dependencies": {
+    "node-html-parser": "^6.1.13"
   }
 }

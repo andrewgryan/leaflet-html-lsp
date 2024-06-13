@@ -1,5 +1,7 @@
 const fs = require("fs")
 import { decode } from "./rpc"
+import { analyse } from "./analyser"
+import { Diagnostic } from "./diagnostic"
 
 
 const log = (msg: string) => {
@@ -103,22 +105,6 @@ interface PublishDiagnosticsParams {
   uri: DocumentUri;
   diagnostics: Diagnostic[];
 }
-
-interface Diagnostic {
-  range: Range;
-  message: string;
-}
-
-interface Range {
-  start: Position;
-  end: Position;
-}
-
-interface Position {
-  line: number;
-  character: number;
-}
-
 
 const respond = (message: NotificationMessage | ResponseMessage) => {
   const response = encode(message)
@@ -225,39 +211,13 @@ const textDocumentCompletionResult = (): CompletionItem[] => {
 
 // Diagnostics
 const publishDiagnostics = (uri: DocumentUri): PublishDiagnosticsNotification => {
-  // TODO: analyse code
   const text = DOCUMENTS[uri]
-  const lines = text.split("\n")
-  const diagnostics = []
-  for (let i=0; i<lines.length; i++) {
-    const j = lines[i].indexOf("l-map")
-    if (j !== -1) {
-      if (lines[i].indexOf("center") === -1) {
-        diagnostics.push({
-            range: {
-              start: {line: i, character: j},
-              end: {line: i, character: j + 5}
-            },
-            message: "Missing 'center' HTML attribute."
-        })
-      }
-      if (lines[i].indexOf("zoom") === -1) {
-        diagnostics.push({
-            range: {
-              start: {line: i, character: j},
-              end: {line: i, character: j + 5}
-            },
-            message: "Missing 'zoom' HTML attribute."
-        })
-      }
-    }
-  }
   return {
     jsonrpc: "2.0",
     method: "textDocument/publishDiagnostics",
     params: {
       uri,
-      diagnostics
+      diagnostics: analyse(text)
     }
   }
 }
