@@ -1,17 +1,17 @@
-import fs from "fs"
-import { encode, decode } from "./rpc"
-import { analyse } from "./analyser"
-import { Diagnostic, Position, Range } from "./diagnostic"
-import parse from "node-html-parser"
-
+import fs from "fs";
+import { encode, decode } from "./rpc";
+import { analyse } from "./analyser";
+import { Diagnostic, Position, Range } from "./diagnostic";
+import parse from "node-html-parser";
+import { ELEMENT_DEFINITIONS } from "./schema";
 
 const log = (msg: string) => {
   fs.appendFile("./logs.txt", msg, (err: NodeJS.ErrnoException | null) => {
     if (err) {
-      console.error(err)
+      console.error(err);
     }
-  })
-}
+  });
+};
 
 interface Message {
   jsonrpc: string;
@@ -39,7 +39,7 @@ interface CompletionRequest extends RequestMessage {
 }
 
 interface TextDocumentCompletionResponse extends ResponseMessage {
-  result: CompletionItem[]
+  result: CompletionItem[];
 }
 
 interface CompletionParams {}
@@ -49,7 +49,7 @@ interface InitializeRequest extends RequestMessage {
 }
 
 interface InitializeResponse extends ResponseMessage {
-  result: InitializeResult
+  result: InitializeResult;
 }
 
 interface InitializeResult {
@@ -57,7 +57,7 @@ interface InitializeResult {
   serverInfo: {
     name: string;
     version: string;
-  }
+  };
 }
 
 interface ServerCapabilities {
@@ -67,9 +67,8 @@ interface ServerCapabilities {
 }
 
 interface ShutdownResponse extends ResponseMessage {
-  result: null
+  result: null;
 }
-
 
 interface ShutdownRequest extends RequestMessage {
   method: "shutdown";
@@ -81,7 +80,7 @@ interface ExitRequest extends RequestMessage {
 
 interface CodeActionRequest extends RequestMessage {
   method: "textDocument/codeAction";
-  params: CodeActionParams
+  params: CodeActionParams;
 }
 
 interface CodeActionResponse extends ResponseMessage {
@@ -107,19 +106,19 @@ type Request =
   | ShutdownRequest
   | ExitRequest
   | CompletionRequest
-  | CodeActionRequest
+  | CodeActionRequest;
 
 type Notification =
-  | {method: "textDocument/didOpen", params: DidOpenTextDocumentParams}
-  | {method: "textDocument/didChange", params: DidChangeTextDocumentParams}
-  | PublishDiagnosticsNotification
+  | { method: "textDocument/didOpen"; params: DidOpenTextDocumentParams }
+  | { method: "textDocument/didChange"; params: DidChangeTextDocumentParams }
+  | PublishDiagnosticsNotification;
 
 interface PublishDiagnosticsNotification extends NotificationMessage {
-  method: "textDocument/publishDiagnostics",
-  params: PublishDiagnosticsParams
+  method: "textDocument/publishDiagnostics";
+  params: PublishDiagnosticsParams;
 }
 
-type DocumentUri = string
+type DocumentUri = string;
 
 interface PublishDiagnosticsParams {
   uri: DocumentUri;
@@ -127,53 +126,55 @@ interface PublishDiagnosticsParams {
 }
 
 const respond = (message: NotificationMessage | ResponseMessage) => {
-  const response = encode(message)
-  process.stdout.write(response)
-}
+  const response = encode(message);
+  process.stdout.write(response);
+};
 
 const initializeResponse = (id: number): InitializeResponse => {
   return {
     jsonrpc: "2.0",
     id,
-    result: initializeResult()
-  }
-}
+    result: initializeResult(),
+  };
+};
 
 const initializeResult = (): InitializeResult => {
   return {
     capabilities: {
       textDocumentSync: 1,
       codeActionProvider: true,
-      completionProvider: {}
+      completionProvider: {},
     },
     serverInfo: {
       name: "leaflet-html",
-      version: "0.0.0"
-    }
-  }
-}
+      version: "0.0.0",
+    },
+  };
+};
 
 const shutdownResponse = (id: number): ShutdownResponse => {
   return {
     jsonrpc: "2.0",
     id,
-    result: null
-  }
-}
+    result: null,
+  };
+};
 
-const textDocumentCompletionResponse = (id: number): TextDocumentCompletionResponse => {
+const textDocumentCompletionResponse = (
+  id: number,
+): TextDocumentCompletionResponse => {
   return {
     jsonrpc: "2.0",
     id,
-    result: textDocumentCompletionResult()
-  }
-}
+    result: textDocumentCompletionResult(),
+  };
+};
 
 type DocumentStore = {
   [key: string]: string;
-}
+};
 
-const DOCUMENTS: DocumentStore = {}
+const DOCUMENTS: DocumentStore = {};
 
 interface TextDocumentItem {
   uri: string;
@@ -202,17 +203,17 @@ interface TextDocumentIdentifier {
 type TextDocumentContentChangeEvent = {
   // TODO: implement other properties
   text: string;
-}
+};
 
 const textDocumentDidOpen = (params: DidOpenTextDocumentParams) => {
-  DOCUMENTS[params.textDocument.uri] = params.textDocument.text
-}
+  DOCUMENTS[params.textDocument.uri] = params.textDocument.text;
+};
 
 const textDocumentDidChange = (params: DidChangeTextDocumentParams) => {
   if (params.contentChanges.length > 0) {
-    DOCUMENTS[params.textDocument.uri] = params.contentChanges[0].text
+    DOCUMENTS[params.textDocument.uri] = params.contentChanges[0].text;
   }
-}
+};
 
 // Completion
 interface CompletionItem {
@@ -223,28 +224,46 @@ interface CompletionItem {
 
 const textDocumentCompletionResult = (): CompletionItem[] => {
   return [
-    { label: "l-map", detail: "l-map", documentation: "Leaflet L.map component" },
-    { label: "l-tile-layer", detail: "l-tile-layer", documentation: "Leaflet L.tileLayer component" },
-    { label: "l-marker", detail: "l-marker", documentation: "Leaflet L.marker component" },
-    { label: "l-icon", detail: "l-icon", documentation: "Leaflet L.icon component" },
-  ]
-}
+    {
+      label: "l-map",
+      detail: "l-map",
+      documentation: "Leaflet L.map component",
+    },
+    {
+      label: "l-tile-layer",
+      detail: "l-tile-layer",
+      documentation: "Leaflet L.tileLayer component",
+    },
+    {
+      label: "l-marker",
+      detail: "l-marker",
+      documentation: "Leaflet L.marker component",
+    },
+    {
+      label: "l-icon",
+      detail: "l-icon",
+      documentation: "Leaflet L.icon component",
+    },
+  ];
+};
 
 // Diagnostics
-const publishDiagnostics = (uri: DocumentUri): PublishDiagnosticsNotification => {
-  const text = DOCUMENTS[uri]
+const publishDiagnostics = (
+  uri: DocumentUri,
+): PublishDiagnosticsNotification => {
+  const text = DOCUMENTS[uri];
   return {
     jsonrpc: "2.0",
     method: "textDocument/publishDiagnostics",
     params: {
       uri,
-      diagnostics: analyse(text)
-    }
-  }
-}
+      diagnostics: analyse(text),
+    },
+  };
+};
 
 // Code actions
-type CodeActionResult = (Command | CodeAction)[] | null
+type CodeActionResult = (Command | CodeAction)[] | null;
 
 interface CodeAction {
   title: string;
@@ -253,7 +272,7 @@ interface CodeAction {
 }
 
 interface WorkspaceEdit {
-  changes: {[uri: DocumentUri]: TextEdit[]; };
+  changes: { [uri: DocumentUri]: TextEdit[] };
 }
 
 interface Command {
@@ -266,109 +285,111 @@ interface TextEdit {
   newText: string;
 }
 
-const codeActionResponse = (id: number, result: CodeActionResult): CodeActionResponse => {
+const codeActionResponse = (
+  id: number,
+  result: CodeActionResult,
+): CodeActionResponse => {
   return {
     jsonrpc: "2.0",
     id,
-    result
-  }
-}
+    result,
+  };
+};
 
 // Scan from start of string to position
 const getIndex = (text: string, position: Position) => {
-  let line = 0
-  let character = 0
-  for (let i=0; i<text.length; i++) {
-    if ((line === position.line) && (character === position.character)) {
-      return i
+  let line = 0;
+  let character = 0;
+  for (let i = 0; i < text.length; i++) {
+    if (line === position.line && character === position.character) {
+      return i;
     }
-    let c = text[i]
+    let c = text[i];
     if (c === "\n") {
-      line += 1
-      character = 0
+      line += 1;
+      character = 0;
     } else {
-      character += 1
+      character += 1;
     }
   }
-  return null
-}
+  return null;
+};
 
 const getText = (uri: DocumentUri, range: Range): string => {
-  const fullText = DOCUMENTS[uri]
-  const { start, end } = range
-  const i = getIndex(fullText, start)
-  const j = getIndex(fullText, end)
+  const fullText = DOCUMENTS[uri];
+  const { start, end } = range;
+  const i = getIndex(fullText, start);
+  const j = getIndex(fullText, end);
   if (i === null) {
-    return ""
+    return "";
   }
   if (j === null) {
-    return fullText.substring(i)
+    return fullText.substring(i);
   }
-  return fullText.substring(i, j)
-}
+  return fullText.substring(i, j);
+};
 
 const codeActions = (params: CodeActionParams): CodeActionResult => {
-  const actions = []
+  const actions = [];
   if (params.context.diagnostics.length > 0) {
-    const range = params.context.diagnostics[0].range
-    const text = getText(params.textDocument.uri, range)
-    const dom = parse(text)
+    const range = params.context.diagnostics[0].range;
+    const text = getText(params.textDocument.uri, range);
+    const dom = parse(text);
 
     // TODO: drive this with diagnostic data
-    const els = dom.getElementsByTagName("l-map")
-    els.forEach(el => {
-      if (!el.hasAttribute("zoom")) {
-        el.setAttribute("zoom", "0")
-      }
-      if (!el.hasAttribute("center")) {
-        el.setAttribute("center", "[0, 0]")
-      }
-    })
-    
-    // params.context.diagnostics.forEach(diagnostic => {
-    //   // TODO: Fix all missing attributes
-    // })
-    
+    ELEMENT_DEFINITIONS.forEach(([tagName, attributes]) => {
+      const els = dom.getElementsByTagName(tagName);
+      els.forEach((el) => {
+        attributes.forEach((attribute) => {
+          if (!el.hasAttribute(attribute.name)) {
+            el.setAttribute(attribute.name, attribute.default);
+          }
+        });
+      });
+    });
     const changes = [
       {
         range,
-        newText: dom.toString()
-      }
-    ]
-    actions.push({ title: "Add missing attributes", edit: { changes: { [params.textDocument.uri]: changes } }})
+        newText: dom.toString(),
+      },
+    ];
+    actions.push({
+      title: "Add missing attributes",
+      edit: { changes: { [params.textDocument.uri]: changes } },
+    });
   }
-  return actions
-}
+  return actions;
+};
 
 // Listen on stdin/stdout
 process.stdin.on("data", (buf) => {
-  const message = buf.toString()
-  log(`${message}\n`)
-  const payloads = decode(message) as (Request | Notification)[]
-  payloads.forEach(payload => {
+  const message = buf.toString();
+  log(`${message}\n`);
+  const payloads = decode(message) as (Request | Notification)[];
+  payloads.forEach((payload) => {
     switch (payload.method) {
-      case("initialize"):
+      case "initialize":
         respond(initializeResponse(payload.id));
         break;
-      case("textDocument/didOpen"):
-        textDocumentDidOpen(payload.params)
-        respond(publishDiagnostics(payload.params.textDocument.uri))
+      case "textDocument/didOpen":
+        textDocumentDidOpen(payload.params);
+        respond(publishDiagnostics(payload.params.textDocument.uri));
         break;
-      case("textDocument/didChange"):
-        textDocumentDidChange(payload.params)
-        respond(publishDiagnostics(payload.params.textDocument.uri))
+      case "textDocument/didChange":
+        textDocumentDidChange(payload.params);
+        respond(publishDiagnostics(payload.params.textDocument.uri));
         break;
-      case("textDocument/completion"):
-        respond(textDocumentCompletionResponse(payload.id))
+      case "textDocument/completion":
+        respond(textDocumentCompletionResponse(payload.id));
         break;
-      case("textDocument/codeAction"):
-        respond(codeActionResponse(payload.id, codeActions(payload.params)))
+      case "textDocument/codeAction":
+        respond(codeActionResponse(payload.id, codeActions(payload.params)));
         break;
-      case("shutdown"):
+      case "shutdown":
         respond(shutdownResponse(payload.id));
         break;
-      case("exit"):
-        process.exit(0)
+      case "exit":
+        process.exit(0);
     }
-  })
-})
+  });
+});

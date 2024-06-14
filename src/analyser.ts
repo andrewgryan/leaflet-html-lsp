@@ -1,12 +1,6 @@
 import { parse } from "node-html-parser";
 import { Diagnostic, DiagnosticSeverity } from "./diagnostic";
-
-interface TypedAttribute {
-  name: string;
-  format: "json" | "number" | "string";
-}
-
-type Definition = [string, TypedAttribute[]];
+import { ELEMENT_DEFINITIONS } from "./schema";
 
 // Analyse Leaflet-HTML syntax
 export const analyse = (text: string): Diagnostic[] => {
@@ -33,16 +27,9 @@ export const analyse = (text: string): Diagnostic[] => {
     }
   }
 
-  // Definition
-  const definitions: Definition[] = [
-    ["l-map", [{name: "center", format: "json"}, {name: "zoom", format: "number"}]],
-    ["l-tile-layer", [{name: "url-template", format: "string"}]],
-    ["l-circle", [{name: "lat-lng", format: "json"}]],
-  ];
-
   // HTML parser
   const document = parse(text);
-  definitions.forEach(([tagName, attNames]) => {
+  ELEMENT_DEFINITIONS.forEach(([tagName, attNames]) => {
     const els = document.querySelectorAll(tagName);
     els.forEach((el) => {
       attNames.forEach((att) => {
