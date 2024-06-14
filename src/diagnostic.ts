@@ -18,7 +18,7 @@ export interface Range {
   end: Position;
 }
 
-interface Position {
+export interface Position {
   line: number;
   character: number;
 }

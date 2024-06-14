@@ -1,7 +1,8 @@
 import fs from "fs"
 import { encode, decode } from "./rpc"
 import { analyse } from "./analyser"
-import { Diagnostic, Range } from "./diagnostic"
+import { Diagnostic, Position, Range } from "./diagnostic"
+import parse from "node-html-parser"
 
 
 const log = (msg: string) => {
@@ -273,16 +274,66 @@ const codeActionResponse = (id: number, result: CodeActionResult): CodeActionRes
   }
 }
 
+// Scan from start of string to position
+const getIndex = (text: string, position: Position) => {
+  let line = 0
+  let character = 0
+  for (let i=0; i<text.length; i++) {
+    if ((line === position.line) && (character === position.character)) {
+      return i
+    }
+    let c = text[i]
+    if (c === "\n") {
+      line += 1
+      character = 0
+    } else {
+      character += 1
+    }
+  }
+  return null
+}
+
+const getText = (uri: DocumentUri, range: Range): string => {
+  const fullText = DOCUMENTS[uri]
+  const { start, end } = range
+  const i = getIndex(fullText, start)
+  const j = getIndex(fullText, end)
+  if (i === null) {
+    return ""
+  }
+  if (j === null) {
+    return fullText.substring(i)
+  }
+  return fullText.substring(i, j)
+}
+
 const codeActions = (params: CodeActionParams): CodeActionResult => {
-  const changes = {
-    [params.textDocument.uri]: [
+  const actions = []
+  if (params.context.diagnostics.length > 0) {
+    const range = params.context.diagnostics[0].range
+    const text = getText(params.textDocument.uri, range)
+    const dom = parse(text)
+
+    // TODO: drive this with diagnostic data
+    const els = dom.getElementsByTagName("l-map")
+    els.forEach(el => {
+      el.setAttribute("zoom", "0")
+      el.setAttribute("center", "[0, 0]")
+    })
+    
+    // params.context.diagnostics.forEach(diagnostic => {
+    //   // TODO: Fix all missing attributes
+    // })
+    
+    const changes = [
       {
-        range: params.range,
-        newText: "Hello, World!"
+        range,
+        newText: dom.toString()
       }
     ]
+    actions.push({ title: "Add missing attributes", edit: { changes: { [params.textDocument.uri]: changes } }})
   }
-  return [{ title: "Insert/replace with Hello, World!", edit: { changes }}]
+  return actions
 }
 
 // Listen on stdin/stdout
