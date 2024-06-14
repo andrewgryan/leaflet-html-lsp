@@ -337,7 +337,7 @@ const codeActions = (params: CodeActionParams): CodeActionResult => {
     const dom = parse(text);
 
     // TODO: drive this with diagnostic data
-    ELEMENT_DEFINITIONS.forEach(([tagName, attributes]) => {
+    ELEMENT_DEFINITIONS.forEach(({tagName, attributes}) => {
       const els = dom.getElementsByTagName(tagName);
       els.forEach((el) => {
         attributes.forEach((attribute) => {

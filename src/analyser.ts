@@ -29,17 +29,17 @@ export const analyse = (text: string): Diagnostic[] => {
 
   // HTML parser
   const document = parse(text);
-  ELEMENT_DEFINITIONS.forEach(([tagName, attNames]) => {
+  ELEMENT_DEFINITIONS.forEach(({tagName, attributes}) => {
     const els = document.querySelectorAll(tagName);
     els.forEach((el) => {
-      attNames.forEach((att) => {
+      attributes.forEach((attribute) => {
         let iStart = el.range[0];
         let iEnd = el.range[1];
-        if (el.hasAttribute(att.name)) {
+        if (el.hasAttribute(attribute.name)) {
           // Try to parse it
-          const value = el.getAttribute(att.name);
+          const value = el.getAttribute(attribute.name);
           if (value !== undefined) {
-            switch(att.format) {
+            switch(attribute.format) {
               case("json"):
                 try {
                   JSON.parse(value)
@@ -56,7 +56,7 @@ export const analyse = (text: string): Diagnostic[] => {
                         character: characterNumber[iEnd],
                       },
                     },
-                    message: `Could not parse: '${att.name}' into ${att.format}.`,
+                    message: `Could not parse: '${attribute.name}' into ${attribute.format}.`,
                   });
                 }
                 break;
@@ -74,7 +74,7 @@ export const analyse = (text: string): Diagnostic[] => {
                         character: characterNumber[iEnd],
                       },
                     },
-                    message: `Could not parse: '${att.name}' into ${att.format}.`,
+                    message: `Could not parse: '${attribute.name}' into ${attribute.format}.`,
                   });
                 }
                 break;
@@ -93,7 +93,7 @@ export const analyse = (text: string): Diagnostic[] => {
               },
               end: { line: lineNumber[iEnd], character: characterNumber[iEnd] },
             },
-            message: `Missing '${att.name}' HTML attribute.`,
+            message: `Missing '${attribute.name}' HTML attribute.`,
           });
         }
       });
