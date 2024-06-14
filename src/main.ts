@@ -317,8 +317,12 @@ const codeActions = (params: CodeActionParams): CodeActionResult => {
     // TODO: drive this with diagnostic data
     const els = dom.getElementsByTagName("l-map")
     els.forEach(el => {
-      el.setAttribute("zoom", "0")
-      el.setAttribute("center", "[0, 0]")
+      if (!el.hasAttribute("zoom")) {
+        el.setAttribute("zoom", "0")
+      }
+      if (!el.hasAttribute("center")) {
+        el.setAttribute("center", "[0, 0]")
+      }
     })
     
     // params.context.diagnostics.forEach(diagnostic => {
