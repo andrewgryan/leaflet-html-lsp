@@ -223,28 +223,18 @@ interface CompletionItem {
 }
 
 const textDocumentCompletionResult = (): CompletionItem[] => {
-  return [
-    {
-      label: "l-map",
-      detail: "l-map",
-      documentation: "Leaflet L.map component",
-    },
-    {
-      label: "l-tile-layer",
-      detail: "l-tile-layer",
-      documentation: "Leaflet L.tileLayer component",
-    },
-    {
-      label: "l-marker",
-      detail: "l-marker",
-      documentation: "Leaflet L.marker component",
-    },
-    {
-      label: "l-icon",
-      detail: "l-icon",
-      documentation: "Leaflet L.icon component",
-    },
-  ];
+  return ELEMENT_DEFINITIONS.map(({ tagName, attributes, documentation }) => {
+    let dom = parse(`<${tagName}></${tagName}>`)
+    let el = dom.querySelector(tagName)
+    attributes.forEach((attribute) => {
+      el?.setAttribute(attribute.name, attribute.default)
+    })
+    return {
+      label: dom.toString(),
+      detail: tagName,
+      documentation,
+    }
+  })
 };
 
 // Diagnostics
